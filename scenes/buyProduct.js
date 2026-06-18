@@ -3,6 +3,7 @@ const { getProductByCode } = require("../services/product");
 const { getBalance, reduceBalance, addBalance } = require("../services/balance");
 const { createTransaction } = require("../services/sawargipay");
 const { saveTransaction } = require("../services/transaction");
+const { sendNotification } = require("../services/notification");
 
 function formatRupiah(n) {
   return Number(n || 0).toLocaleString("id-ID");
@@ -152,6 +153,25 @@ Silakan topup saldo terlebih dahulu.`,
         sn: trx.sn || "",
         refunded: 0
       });
+
+      const username = ctx.from.username
+  ? "@" + ctx.from.username
+  : "Tidak ada username";
+
+await sendNotification(
+  ctx.telegram,
+`🛒 <b>TRANSAKSI BARU</b>
+
+<blockquote>
+👤 User       : ${username}
+🆔 ID         : ${ctx.from.id}
+📦 Produk     : ${product.name}
+📱 Nomor      : ${target}
+💰 Harga      : Rp${formatRupiah(product.sell_price)}
+📌 Status     : ${trx.status}
+🧾 TRX ID     : ${trx.trx_kode}
+</blockquote>`
+);
 
       await ctx.reply(
 `✅ TRANSAKSI DIPROSES

@@ -8,13 +8,27 @@ const {
   updateDepositStatus
 } = require("./services/deposit");
 const { addBalance } = require("./services/balance");
+const { checkTransactionStatus } = require("./services/sawargipay");
+const {
+  getPendingTransactions,
+  updateTransactionStatus,
+  markRefunded
+} = require("./services/transaction");
 const { checkQrisStatus } = require("./services/autogopay");
+const { sendNotification } = require("./services/notification");
 
 const registerStart = require("./handlers/start");
 const registerMenu = require("./handlers/menu");
 const registerProduct = require("./handlers/product");
 const registerAdmin = require("./handlers/admin");
 const registerDeposit = require("./handlers/deposit");
+const registerHistory = require("./handlers/history");
+const registerDepositHistory = require("./handlers/depositHistory");
+const registerAdminDashboard = require("./handlers/adminDashboard");
+const registerAdminBackup = require("./handlers/adminBackup");
+const registerAdminRestore = require("./handlers/adminRestore");
+const registerAdminUsers = require("./handlers/adminUsers");
+const registerAdminBroadcast = require("./handlers/adminBroadcast");
 
 const buyProductScene = require("./scenes/buyProduct");
 const depositScene = require("./scenes/deposit");
@@ -39,6 +53,13 @@ registerMenu(bot);
 registerProduct(bot);
 registerAdmin(bot);
 registerDeposit(bot);
+registerHistory(bot);
+registerDepositHistory(bot);
+registerAdminDashboard(bot);
+registerAdminBackup(bot);
+registerAdminRestore(bot);
+registerAdminUsers(bot);
+registerAdminBroadcast(bot);
 
 bot.catch((err) => {
   console.error("BOT ERROR:", err);
@@ -107,6 +128,32 @@ Rp${formatRupiah(deposit.amount)}
 Saldo telah ditambahkan ke akun Anda.`
           ).catch(() => {});
 
+          const username = deposit.telegram_username
+  ? "@" + deposit.telegram_username
+  : "Tidak ada username";
+
+await sendNotification(
+  bot,
+`💳 <b>TOPUP BERHASIL</b>
+
+<blockquote>
+👤 User:
+${username}
+
+🆔 Telegram ID:
+${deposit.telegram_id}
+
+💰 Nominal:
+Rp${formatRupiah(deposit.amount)}
+
+💳 Metode:
+QRIS AutoGoPay
+
+🧾 TRX ID:
+${deposit.transaction_id}
+</blockquote>`
+);
+
           console.log(
             "Topup polling selesai:",
             deposit.telegram_id,
@@ -144,6 +191,122 @@ Saldo telah ditambahkan ke akun Anda.`
   }
 }
 
+let trxPollingRunning = false;
+
+async function checkPendingSawargiTransactions() {
+  if (trxPollingRunning) return;
+
+  trxPollingRunning = true;
+
+  try {
+    const transactions = getPendingTransactions();
+
+    if (!transactions.length) return;
+
+    console.log(`Polling transaksi pending: ${transactions.length}`);
+
+    for (const trx of transactions) {
+      try {
+        const response = await checkTransactionStatus(trx.trx_id);
+
+        if (!response.status) continue;
+
+        const data = response.data;
+        const status = String(data.status || "").toLowerCase();
+
+        if (status === "pending") continue;
+
+        updateTransactionStatus(trx.trx_id, {
+          status: data.status,
+          rc: data.rc || trx.rc,
+          sn: data.sn || trx.sn || ""
+        });
+
+        if (status === "sukses") {
+          await bot.telegram.sendMessage(
+            trx.telegram_id,
+`✅ TRANSAKSI BERHASIL
+
+Produk : ${trx.product_name}
+Nomor  : ${trx.target_number}
+Harga  : Rp${Number(trx.sell_price).toLocaleString("id-ID")}
+SN     : ${data.sn || "-"}`
+          ).catch(() => {});
+
+          const username = trx.telegram_username
+  ? "@" + trx.telegram_username
+  : "Tidak ada username";
+
+await sendNotification(
+  bot,
+`✅ <b>TRANSAKSI BERHASIL</b>
+
+<blockquote>
+👤 User       : ${username}
+🆔 ID         : ${trx.telegram_id}
+📦 Produk     : ${trx.product_name}
+📱 Nomor      : ${trx.target_number}
+💰 Harga      : Rp${Number(trx.sell_price).toLocaleString("id-ID")}
+📌 Status     : ${data.status}
+📡 RC         : ${data.rc || "-"}
+🔑 SN         : ${data.sn || "-"}
+🧾 TRX ID     : ${trx.trx_id}
+</blockquote>`
+);
+        }
+
+        if (status === "gagal" && Number(trx.refunded || 0) === 0) {
+          addBalance(
+            trx.telegram_id,
+            Number(trx.sell_price),
+            `Refund transaksi gagal ${trx.product_name}`
+          );
+
+          markRefunded(trx.trx_id);
+
+          await bot.telegram.sendMessage(
+            trx.telegram_id,
+`❌ TRANSAKSI GAGAL
+
+Produk : ${trx.product_name}
+Nomor  : ${trx.target_number}
+Harga  : Rp${Number(trx.sell_price).toLocaleString("id-ID")}
+
+Saldo sudah dikembalikan.`
+          ).catch(() => {});
+
+          const username = trx.telegram_username
+  ? "@" + trx.telegram_username
+  : "Tidak ada username";
+
+await sendNotification(
+  bot,
+`❌ <b>TRANSAKSI GAGAL</b>
+
+<blockquote>
+👤 User       : ${username}
+🆔 ID         : ${trx.telegram_id}
+📦 Produk     : ${trx.product_name}
+📱 Nomor      : ${trx.target_number}
+💰 Refund     : Rp${Number(trx.sell_price).toLocaleString("id-ID")}
+📌 Status     : ${data.status}
+📡 RC         : ${data.rc || "-"}
+🧾 TRX ID     : ${trx.trx_id}
+</blockquote>`
+);
+        }
+
+      } catch (err) {
+        console.error("Polling trx error:", trx.trx_id, err.message);
+      }
+    }
+  } catch (err) {
+    console.error("Polling Sawargi error:", err.message);
+  } finally {
+    trxPollingRunning = false;
+  }
+}
+
 (async () => {
   console.log("1. Init DB...");
   await initDB();
@@ -151,15 +314,19 @@ Saldo telah ditambahkan ke akun Anda.`
 
   console.log("3. Launch Bot...");
 
-try {
-  await bot.launch();
+  bot.launch({
+    dropPendingUpdates: true
+  }).catch((err) => {
+    console.error("LAUNCH ERROR:", err);
+  });
+
   console.log("4. Bot OK");
-} catch (err) {
-  console.error("GAGAL LAUNCH BOT:", err);
-}
 
   setInterval(checkPendingDeposits, 3000);
   console.log("5. Polling deposit aktif setiap 3 detik");
+
+  setInterval(checkPendingSawargiTransactions, 10000);
+console.log("5b. Polling transaksi Sawargi aktif setiap 30 detik");
 
   console.log("6. Z PPOB Bot Online");
 })();

@@ -117,10 +117,25 @@ function getPendingDeposits() {
   return rowsToObjects(result);
 }
 
+function getUserDeposits(telegramId, limit = 10) {
+  const db = getDB();
+
+  const result = db.exec(`
+    SELECT *
+    FROM deposits
+    WHERE telegram_id = '${String(telegramId)}'
+    ORDER BY id DESC
+    LIMIT ${Number(limit)}
+  `);
+
+  return rowsToObjects(result);
+}
+
 module.exports = {
   createDeposit,
   getDepositByTransactionId,
   updateDepositStatus,
   updateDepositMessageId,
-  getPendingDeposits
+  getPendingDeposits,
+  getUserDeposits
 };

@@ -70,8 +70,22 @@ function getAllUsers() {
   );
 }
 
+function getAllUsersForBroadcast() {
+  const db = getDB();
+
+  const result = db.exec(`
+    SELECT *
+    FROM users
+    WHERE status = 'active'
+    ORDER BY id ASC
+  `);
+
+  return rowToObject(result);
+}
+
 module.exports = {
   createUser,
   getUser,
-  getAllUsers
+  getAllUsers,
+  getAllUsersForBroadcast
 };

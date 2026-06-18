@@ -8,16 +8,20 @@ function formatRupiah(n) {
 }
 
 module.exports = (bot) => {
+  
   bot.action("home", async (ctx) => {
-    await ctx.answerCbQuery();
+  await ctx.answerCbQuery();
 
-    await ctx.editMessageText(
+  const isAdmin =
+    String(ctx.from.id) === String(process.env.ADMIN_ID);
+
+  await ctx.editMessageText(
 `🏠 MENU UTAMA
 
 Silakan pilih layanan:`,
-      mainMenu()
-    );
-  });
+    mainMenu(isAdmin)
+  );
+});
 
   bot.action("profile", async (ctx) => {
     await ctx.answerCbQuery();

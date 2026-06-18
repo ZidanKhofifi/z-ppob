@@ -27,17 +27,42 @@ async function getProducts(category) {
 }
 
 async function createTransaction({ productCode, target, category }) {
-  const res = await axios.post(
-    `${BASE_URL}/transaksi`,
-    {
+  try {
+    const res = await axios.post(
+      `${BASE_URL}/transaksi`,
+      {
+        produk_kode: productCode,
+        tujuan: target,
+        kategori: category
+      },
+      headers()
+    );
+
+    return res.data;
+
+  } catch (err) {
+
+    console.log("===== SAWARGI CREATE TRANSACTION ERROR =====");
+
+    if (err.response) {
+      console.log("Status:", err.response.status);
+      console.log("Data:", err.response.data);
+    } else {
+      console.log("Error:", err.message);
+    }
+
+    console.log("REQUEST:");
+    console.log({
       produk_kode: productCode,
       tujuan: target,
       kategori: category
-    },
-    headers()
-  );
+    });
 
-  return res.data;
+    throw new Error(
+      err.response?.data?.message ||
+      err.message
+    );
+  }
 }
 
 async function checkTransactionStatus(trxId) {

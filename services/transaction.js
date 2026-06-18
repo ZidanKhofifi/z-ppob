@@ -21,30 +21,38 @@ function saveTransaction(data) {
     (
       trx_id,
       telegram_id,
+      telegram_username,
+      telegram_name,
       product_code,
       product_name,
       category,
       target_number,
       provider_price,
       sell_price,
+      payment_amount,
+      used_balance,
       status,
       rc,
       sn,
       refunded,
       updated_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `,
     [
       data.trx_id,
       String(data.telegram_id),
+      data.telegram_username || "",
+      data.telegram_name || "",
       data.product_code,
       data.product_name,
       data.category,
       data.target_number,
       Number(data.provider_price || 0),
       Number(data.sell_price || 0),
-      data.status || "pending",
+      Number(data.payment_amount || 0),
+      Number(data.used_balance || 0),
+      data.status || "Pending",
       data.rc || "",
       data.sn || "",
       Number(data.refunded || 0)
@@ -107,6 +115,21 @@ function markRefunded(trxId) {
   saveDB();
 }
 
+function getPendingTransactions(limit = 20) {
+  const db = getDB();
+
+  const result = db.exec(`
+    SELECT *
+    FROM transactions
+    WHERE LOWER(status) = 'pending'
+      AND refunded = 0
+    ORDER BY id ASC
+    LIMIT ${Number(limit)}
+  `);
+
+  return rowsToObjects(result);
+}
+
 function getUserTransactions(telegramId, limit = 10) {
   const db = getDB();
 
@@ -126,5 +149,6 @@ module.exports = {
   getTransactionByTrxId,
   updateTransactionStatus,
   markRefunded,
+  getPendingTransactions,
   getUserTransactions
 };

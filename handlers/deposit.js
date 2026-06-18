@@ -5,6 +5,7 @@ const {
   updateDepositStatus
 } = require("../services/deposit");
 const { addBalance } = require("../services/balance");
+const { sendNotification } = require("../services/notification");
 
 function formatRupiah(n) {
   return Number(n || 0).toLocaleString("id-ID");
@@ -48,6 +49,32 @@ module.exports = (bot) => {
         deposit.amount,
         `Topup QRIS ${transactionId}`
       );
+
+      const username = deposit.telegram_username
+  ? "@" + deposit.telegram_username
+  : "Tidak ada username";
+
+await sendNotification(
+  bot,
+`💳 <b>TOPUP BERHASIL</b>
+
+<blockquote>
+👤 User:
+${username}
+
+🆔 Telegram ID:
+${deposit.telegram_id}
+
+💰 Nominal:
+Rp${formatRupiah(deposit.amount)}
+
+💳 Metode:
+QRIS AutoGoPay
+
+🧾 TRX ID:
+${deposit.transaction_id}
+</blockquote>`
+);
 
       updateDepositStatus(transactionId, "paid");
 
