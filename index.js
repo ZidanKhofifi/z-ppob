@@ -42,6 +42,13 @@ if (!process.env.BOT_TOKEN) {
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
+bot.telegram.setMyCommands([
+  {
+    command: "start",
+    description: "Mulai bot"
+  }
+]);
+
 const stage = new Scenes.Stage([
   buyProductScene,
   depositScene
