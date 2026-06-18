@@ -1,15 +1,14 @@
 require("dotenv").config();
 
-const express = require("express");
-const crypto = require("crypto");
 const { Telegraf, session, Scenes } = require("telegraf");
 
 const { initDB } = require("./database/db");
 const {
-  getDepositByTransactionId,
+  getPendingDeposits,
   updateDepositStatus
 } = require("./services/deposit");
 const { addBalance } = require("./services/balance");
+const { checkQrisStatus } = require("./services/autogopay");
 
 const registerStart = require("./handlers/start");
 const registerMenu = require("./handlers/menu");
@@ -45,100 +44,104 @@ bot.catch((err) => {
   console.error("BOT ERROR:", err);
 });
 
-function startWebhookServer(bot) {
-  const app = express();
+function formatRupiah(n) {
+  return Number(n || 0).toLocaleString("id-ID");
+}
 
-  app.post(
-    "/webhook/autogopay",
-    express.raw({ type: "application/json" }),
-    async (req, res) => {
+let pollingRunning = false;
+
+async function checkPendingDeposits() {
+  if (pollingRunning) return;
+
+  pollingRunning = true;
+
+  try {
+    const deposits = getPendingDeposits();
+
+    if (!deposits.length) return;
+
+    console.log(`Polling deposit pending: ${deposits.length}`);
+
+    for (const deposit of deposits) {
       try {
-        console.log("WEBHOOK MASUK");
-
-        const signature = req.headers["x-signature"];
-        const rawBody = req.body.toString();
-
-        const expected = crypto
-          .createHmac("sha256", process.env.AUTOGOPAY_API_KEY)
-          .update(rawBody)
-          .digest("hex");
-
-        if (signature !== expected) {
-          return res.status(401).json({
-            success: false,
-            message: "Invalid signature"
-          });
-        }
-
-        const body = JSON.parse(rawBody);
-
-        if (body.event !== "transaction.received") {
-          return res.json({ success: true });
-        }
-
-        const tx = body.transaction;
-        const transactionId = tx.id || tx.transaction_id;
-        const status = String(tx.status || "").toLowerCase();
-
-        if (!["settlement", "paid"].includes(status)) {
-          return res.json({ success: true });
-        }
-
-        const deposit = getDepositByTransactionId(transactionId);
-
-        if (!deposit) {
-          console.log("Deposit tidak ditemukan:", transactionId);
-          return res.json({ success: true });
-        }
-
-        if (deposit.status === "paid") {
-          console.log("Deposit sudah diproses:", transactionId);
-          return res.json({ success: true });
-        }
-
-        addBalance(
-          deposit.telegram_id,
-          Number(deposit.amount),
-          `Topup QRIS ${transactionId}`
+        const response = await checkQrisStatus(
+          deposit.transaction_id
         );
 
-        updateDepositStatus(transactionId, "paid");
+        const status = String(
+          response?.data?.transaction_status ||
+          response?.data?.status ||
+          "pending"
+        ).toLowerCase();
 
-        if (deposit.qris_message_id) {
-          await bot.telegram.deleteMessage(
-            deposit.telegram_id,
-            deposit.qris_message_id
-          ).catch(() => {});
+        if (["pending"].includes(status)) {
+          continue;
         }
 
-        await bot.telegram.sendMessage(
-          deposit.telegram_id,
+        if (["settlement", "paid"].includes(status)) {
+          addBalance(
+            deposit.telegram_id,
+            Number(deposit.amount),
+            `Topup QRIS ${deposit.transaction_id}`
+          );
+
+          updateDepositStatus(
+            deposit.transaction_id,
+            "paid"
+          );
+
+          if (deposit.qris_message_id) {
+            await bot.telegram.deleteMessage(
+              deposit.telegram_id,
+              deposit.qris_message_id
+            ).catch(() => {});
+          }
+
+          await bot.telegram.sendMessage(
+            deposit.telegram_id,
 `✅ TOPUP BERHASIL
 
 Nominal:
-Rp${Number(deposit.amount).toLocaleString("id-ID")}
+Rp${formatRupiah(deposit.amount)}
 
 Saldo telah ditambahkan ke akun Anda.`
-        ).catch(() => {});
+          ).catch(() => {});
 
-        console.log("Topup selesai:", deposit.telegram_id);
+          console.log(
+            "Topup polling selesai:",
+            deposit.telegram_id,
+            deposit.transaction_id
+          );
 
-        return res.json({ success: true });
+          continue;
+        }
+
+        if (
+          ["expired", "expire", "cancel", "canceled"].includes(status)
+        ) {
+          updateDepositStatus(
+            deposit.transaction_id,
+            "cancel"
+          );
+
+          console.log(
+            "Deposit expired/cancel:",
+            deposit.transaction_id
+          );
+        }
       } catch (err) {
-        console.error("WEBHOOK ERROR:", err);
-        return res.status(500).json({
-          success: false,
-          message: "Webhook error"
-        });
+        console.error(
+          "Polling deposit error:",
+          deposit.transaction_id,
+          err.message
+        );
       }
     }
-  );
-
-  const port = Number(process.env.WEBHOOK_PORT || process.env.PORT || 3000);
-
-  app.listen(port, "0.0.0.0", () => {
-    console.log(`Webhook server running on port ${port}`);
-  });
+  } catch (err) {
+    console.error("Polling error:", err.message);
+  } finally {
+    pollingRunning = false;
+  }
 }
 
 (async () => {
@@ -146,11 +149,17 @@ Saldo telah ditambahkan ke akun Anda.`
   await initDB();
   console.log("2. DB OK");
 
-  startWebhookServer(bot);
-
   console.log("3. Launch Bot...");
+
+try {
   await bot.launch();
   console.log("4. Bot OK");
+} catch (err) {
+  console.error("GAGAL LAUNCH BOT:", err);
+}
+
+  setInterval(checkPendingDeposits, 3000);
+  console.log("5. Polling deposit aktif setiap 3 detik");
 
   console.log("6. Z PPOB Bot Online");
 })();
