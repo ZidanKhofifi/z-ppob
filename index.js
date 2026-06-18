@@ -1,4 +1,5 @@
 require("dotenv").config();
+const cron = require("node-cron");
 
 const { Telegraf, session, Scenes } = require("telegraf");
 
@@ -16,6 +17,7 @@ const {
 } = require("./services/transaction");
 const { checkQrisStatus } = require("./services/autogopay");
 const { sendNotification } = require("./services/notification");
+const { sendAutoBackup } = require("./services/backup");
 
 const registerStart = require("./handlers/start");
 const registerMenu = require("./handlers/menu");
@@ -46,6 +48,15 @@ const stage = new Scenes.Stage([
 ]);
 
 bot.use(session());
+
+bot.use(async (ctx, next) => {
+  if (ctx.chat && ctx.chat.type !== "private") {
+    return;
+  }
+
+  return next();
+});
+
 bot.use(stage.middleware());
 
 registerStart(bot);
@@ -321,6 +332,36 @@ await sendNotification(
   });
 
   console.log("4. Bot OK");
+
+  cron.schedule(
+  "0 0 * * *",
+  async () => {
+    try {
+      console.log("Menjalankan auto backup...");
+
+      await sendAutoBackup(bot);
+
+      console.log(
+        "Auto backup berhasil dikirim ke admin."
+      );
+
+    } catch (err) {
+
+      console.error(
+        "Auto backup gagal:",
+        err.message
+      );
+
+    }
+  },
+  {
+    timezone: "Asia/Jakarta"
+  }
+);
+
+  console.log(
+  "Auto backup aktif setiap 00:00 WIB"
+);
 
   setInterval(checkPendingDeposits, 3000);
   console.log("5. Polling deposit aktif setiap 3 detik");
