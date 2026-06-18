@@ -197,6 +197,12 @@ console.log(
 
 });
 
+app.listen(
+    process.env.PORT || 3000,
+    () => {
+      console.log(`Webhook server runnig`);
+    }
+  );
 
 // =======================
 // START APP
@@ -212,12 +218,7 @@ console.log(
   await bot.launch();
   console.log("4. Bot OK");
 
-  app.listen(
-    process.env.PORT || 3000,
-    () => {
-      console.log("5. Webhook server OK");
-    }
-  );
+  
 
   console.log("6. Z PPOB Bot Online");
 
