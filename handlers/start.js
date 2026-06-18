@@ -4,18 +4,21 @@ const { createUser } = require("../services/user");
 function mainMenu(isAdmin = false) {
   const buttons = [
     [
-      Markup.button.callback("📱 Pulsa", "menu_pulsa"),
+      Markup.button.callback("📱 Beli Pulsa", "menu_pulsa"),
       Markup.button.callback("📶 Paket Data", "menu_data")
     ],
     [
-      Markup.button.callback("💰 Topup Saldo", "deposit"),
-      Markup.button.callback("👤 Profil", "profile")
+      Markup.button.callback("💳 Topup Saldo", "deposit"),
+      Markup.button.callback("👤 Akun Saya", "profile")
     ],
     [
-      Markup.button.callback("📜 Riwayat Transaksi", "history")
+      Markup.button.callback("🧾 Riwayat Transaksi", "history")
     ],
     [
-      Markup.button.callback("💳 Riwayat Topup", "deposit_history")
+      Markup.button.callback("💰 Riwayat Topup", "deposit_history")
+    ],
+    [
+      Markup.button.callback("❓ Bantuan", "help_menu")
     ]
   ];
 
@@ -40,14 +43,28 @@ module.exports = (bot) => {
       String(ctx.from.id) === String(process.env.ADMIN_ID);
 
     await ctx.reply(
-`👋 Selamat datang di Z PPOB
+`🏪 <b>SELAMAT DATANG DI Z PPOB</b>
 
-Layanan tersedia:
-📱 Pulsa
-📶 Paket Data
+<blockquote>
+⚡ Layanan digital otomatis 24 jam
 
-Silakan pilih menu:`,
-      mainMenu(isAdmin)
+📱 Pulsa All Operator
+📶 Paket Data Internet
+💳 Topup Saldo via QRIS
+🧾 Riwayat transaksi real-time
+</blockquote>
+
+💡 <b>Cara menggunakan:</b>
+1. Topup saldo terlebih dahulu
+2. Pilih produk
+3. Masukkan nomor tujuan
+4. Transaksi diproses otomatis
+
+Silakan pilih menu di bawah ini:`,
+      {
+        parse_mode: "HTML",
+        ...mainMenu(isAdmin)
+      }
     );
   });
 };

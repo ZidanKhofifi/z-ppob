@@ -31,6 +31,7 @@ const registerAdminBackup = require("./handlers/adminBackup");
 const registerAdminRestore = require("./handlers/adminRestore");
 const registerAdminUsers = require("./handlers/adminUsers");
 const registerAdminBroadcast = require("./handlers/adminBroadcast");
+const registerHelp = require("./handlers/help");
 
 const buyProductScene = require("./scenes/buyProduct");
 const depositScene = require("./scenes/deposit");
@@ -78,6 +79,7 @@ registerAdminBackup(bot);
 registerAdminRestore(bot);
 registerAdminUsers(bot);
 registerAdminBroadcast(bot);
+registerHelp(bot);
 
 bot.catch((err) => {
   console.error("BOT ERROR:", err);
