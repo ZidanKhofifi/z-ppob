@@ -70,7 +70,7 @@ Rp${formatRupiah(balance)}
 ${escapeHTML(user?.status || "active")}
 </blockquote>
 
-Gunakan saldo untuk membeli pulsa dan paket data otomatis.`,
+`,
       {
         parse_mode: "HTML",
         ...Markup.inlineKeyboard([
