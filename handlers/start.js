@@ -4,21 +4,21 @@ const { createUser } = require("../services/user");
 function mainMenu(isAdmin = false) {
   const buttons = [
     [
-      Markup.button.callback("📱 Beli Pulsa", "menu_pulsa"),
-      Markup.button.callback("📶 Paket Data", "menu_data")
+      Markup.button.callback("⚡ Beli Pulsa", "menu_pulsa"),
+      Markup.button.callback("🌐 Paket Data", "menu_data")
     ],
     [
-      Markup.button.callback("💳 Topup Saldo", "deposit"),
+      Markup.button.callback("💎 Topup Saldo", "deposit"),
       Markup.button.callback("👤 Akun Saya", "profile")
     ],
     [
       Markup.button.callback("🧾 Riwayat Transaksi", "history")
     ],
     [
-      Markup.button.callback("💰 Riwayat Topup", "deposit_history")
+      Markup.button.callback("💳 Riwayat Topup", "deposit_history")
     ],
     [
-      Markup.button.callback("❓ Bantuan", "help_menu")
+      Markup.button.callback("🛟 Pusat Bantuan", "help_menu")
     ]
   ];
 
@@ -43,24 +43,33 @@ module.exports = (bot) => {
       String(ctx.from.id) === String(process.env.ADMIN_ID);
 
     await ctx.reply(
-`🏪 <b>SELAMAT DATANG DI Z PPOB</b>
+`🏪 <b>Z PPOB AUTO ORDER</b>
+<i>Digital Payment Assistant</i>
 
 <blockquote>
-⚡ Layanan digital otomatis 24 jam
+✨ Selamat datang, <b>${ctx.from.first_name || "Customer"}</b>
 
-📱 Pulsa All Operator
-📶 Paket Data Internet
-💳 Topup Saldo via QRIS
-🧾 Riwayat transaksi real-time
+Nikmati layanan PPOB otomatis yang cepat, aman, dan aktif 24 jam.
 </blockquote>
 
-💡 <b>Cara menggunakan:</b>
-1. Topup saldo terlebih dahulu
-2. Pilih produk
-3. Masukkan nomor tujuan
-4. Transaksi diproses otomatis
+╭─「 <b>LAYANAN TERSEDIA</b> 」
+├ ⚡ Pulsa All Operator
+├ 🌐 Paket Data Internet
+├ 💎 Topup Saldo QRIS
+├ 🧾 Riwayat Transaksi
+╰─ 🔄 Status transaksi otomatis
 
-Silakan pilih menu di bawah ini:`,
+╭─「 <b>CARA ORDER</b> 」
+├ 1. Topup saldo terlebih dahulu
+├ 2. Pilih produk yang diinginkan
+├ 3. Masukkan nomor tujuan
+╰ 4. Tunggu transaksi diproses otomatis
+
+<blockquote>
+🛡️ Jika transaksi gagal, saldo akan dikembalikan otomatis.
+</blockquote>
+
+Silakan pilih menu di bawah ini 👇`,
       {
         parse_mode: "HTML",
         ...mainMenu(isAdmin)

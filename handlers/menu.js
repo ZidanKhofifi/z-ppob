@@ -23,17 +23,26 @@ module.exports = (bot) => {
 
     await ctx.editMessageText(
 `🏪 <b>Z PPOB AUTO ORDER</b>
+<i>Digital Payment Assistant</i>
 
 <blockquote>
-⚡ Layanan digital otomatis 24 jam
+✨ Selamat datang kembali, <b>${escapeHTML(ctx.from.first_name || "Customer")}</b>
 
-📱 Pulsa All Operator
-📶 Paket Data Internet
-💳 Topup Saldo via QRIS
-🧾 Riwayat transaksi real-time
+Nikmati layanan PPOB otomatis yang cepat, aman, dan aktif 24 jam.
 </blockquote>
 
-Silakan pilih menu di bawah ini:`,
+╭─「 <b>LAYANAN TERSEDIA</b> 」
+├ ⚡ Pulsa All Operator
+├ 🌐 Paket Data Internet
+├ 💎 Topup Saldo QRIS
+├ 🧾 Riwayat Transaksi
+╰─ 🔄 Status transaksi otomatis
+
+<blockquote>
+🛡️ Jika transaksi gagal, saldo akan dikembalikan otomatis.
+</blockquote>
+
+Silakan pilih menu di bawah ini 👇`,
       {
         parse_mode: "HTML",
         ...mainMenu(isAdmin)
@@ -48,44 +57,39 @@ Silakan pilih menu di bawah ini:`,
     const balance = getBalance(String(ctx.from.id));
 
     await ctx.editMessageText(
-`👤 <b>PROFIL AKUN</b>
+`👤 <b>AKUN SAYA</b>
+<i>Informasi akun pengguna</i>
 
 <blockquote>
-👋 Nama:
-${escapeHTML(ctx.from.first_name || "-")}
+✨ <b>${escapeHTML(ctx.from.first_name || "Customer")}</b>
 
-🔗 Username:
+🔗 Username
 ${ctx.from.username ? "@" + escapeHTML(ctx.from.username) : "-"}
 
-🆔 Telegram ID:
+🆔 Telegram ID
 ${ctx.from.id}
 
-🎖️ Role:
+🎖️ Role
 ${escapeHTML(user?.role || "user")}
 
-💰 Saldo:
-Rp${formatRupiah(balance)}
-
-📌 Status:
+📌 Status
 ${escapeHTML(user?.status || "active")}
+</blockquote>
+
+💎 <b>SALDO AKTIF</b>
+
+<blockquote>
+Rp${formatRupiah(balance)}
 </blockquote>
 
 `,
       {
         parse_mode: "HTML",
         ...Markup.inlineKeyboard([
-          [
-            Markup.button.callback("💳 Topup Saldo", "deposit")
-          ],
-          [
-            Markup.button.callback("🧾 Riwayat Transaksi", "history")
-          ],
-          [
-            Markup.button.callback("💰 Riwayat Topup", "deposit_history")
-          ],
-          [
-            Markup.button.callback("🏠 Home", "home")
-          ]
+          [Markup.button.callback("💎 Topup Saldo", "deposit")],
+          [Markup.button.callback("🧾 Riwayat Transaksi", "history")],
+          [Markup.button.callback("💳 Riwayat Topup", "deposit_history")],
+          [Markup.button.callback("🏠 Kembali ke Menu", "home")]
         ])
       }
     );
